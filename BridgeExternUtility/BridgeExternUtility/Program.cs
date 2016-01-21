@@ -15,9 +15,12 @@ namespace BridgeExternUtility
             const string filePattern = "*.cs";
             var directories = new[]
             {
-                //TODO: (!!!!!) UPDATE THE PATH BEFORE STARTING
+                // ATTENTION:
+                // Setup your local paths for Bridge and Bridge.Html5 projects
+                // before running the Utility
+
                 @"D:\BridgeFork\Bridge",
-                //@"D:\BridgeFork\Html5"
+                @"D:\BridgeFork\Html5"      // (!) Bridge.Html5 project should be configured to Suppress warning 0626
             };
 
             int dirsProcessed = 0;
