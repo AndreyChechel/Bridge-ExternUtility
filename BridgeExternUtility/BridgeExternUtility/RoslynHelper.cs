@@ -18,6 +18,7 @@ namespace BridgeExternUtility
         {
             if (IsModifierApplied(method, SyntaxKind.ExternKeyword) ||
                 IsModifierApplied(method, SyntaxKind.AbstractKeyword) ||
+                IsModifierApplied(method, SyntaxKind.VirtualKeyword) ||
                 !IsMethodWithEmptyBody(method))
             {
                 return false;
