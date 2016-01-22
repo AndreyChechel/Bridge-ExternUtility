@@ -82,7 +82,7 @@ namespace BridgeExternUtility
             var fileSyntaxTree = CSharpSyntaxTree.ParseText(fileContent);
             var root = fileSyntaxTree.GetRoot();
 
-            var updatedMethods = new Dictionary<MethodDeclarationSyntax, MethodDeclarationSyntax>();
+            var updatedMethods = new Dictionary<BaseMethodDeclarationSyntax, BaseMethodDeclarationSyntax>();
 
             // Look at classes only:
             var classes = root.DescendantNodes().OfType<ClassDeclarationSyntax>().ToList();
@@ -90,9 +90,13 @@ namespace BridgeExternUtility
             {
                 var classModified = false;
 
-                // Look at methods of the current class only:
-                var methods = classDeclaration.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
-                foreach (var method in methods)
+                var methodAndOperators =
+                    classDeclaration.DescendantNodes()
+                        .OfType<BaseMethodDeclarationSyntax>()
+                        .Where(x => x.Kind() == SyntaxKind.MethodDeclaration || x.Kind() == SyntaxKind.OperatorDeclaration)
+                        .ToList();
+
+                foreach (var method in methodAndOperators)
                 {
                     var updatedMethod = method;
                     if (RoslynHelper.TransformEmptyMethodToExtern(ref updatedMethod))
