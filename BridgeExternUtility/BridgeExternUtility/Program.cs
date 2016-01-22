@@ -103,6 +103,20 @@ namespace BridgeExternUtility
                     {
                         updatedMethods[method] = updatedMethod;
 
+                        switch (method.Kind())
+                        {
+                            case SyntaxKind.MethodDeclaration:
+                                stat.MethodWasModified();
+                                break;
+
+                            case SyntaxKind.OperatorDeclaration:
+                                stat.OperatorWasModified();
+                                break;
+
+                            default:
+                                throw new NotSupportedException($"BaseMethod type is not supported: {method.GetType().FullName}");
+                        }
+
                         stat.MethodWasModified();
                         classModified = true;
                     }
