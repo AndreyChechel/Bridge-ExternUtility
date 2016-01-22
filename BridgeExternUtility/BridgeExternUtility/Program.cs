@@ -19,8 +19,8 @@ namespace BridgeExternUtility
                 // Setup your local paths for Bridge and Bridge.Html5 projects
                 // before running the Utility
 
-                @"D:\BridgeFork\Bridge",
-                @"D:\BridgeFork\Html5"      // (!) Bridge.Html5 project should be configured to Suppress warning 0626
+                @"D:\MyProjects\Chechel\Repos\Bridge\Bridge",
+                @"D:\MyProjects\Chechel\Repos\Bridge\Html5"      // (!) Bridge.Html5 project should be configured to Suppress warning 0626
             };
 
             int dirsProcessed = 0;
@@ -58,13 +58,18 @@ namespace BridgeExternUtility
             var fileSyntaxTree = CSharpSyntaxTree.ParseText(fileContent);
             var root = fileSyntaxTree.GetRoot();
 
-            var updatedMethods = new Dictionary<MethodDeclarationSyntax, MethodDeclarationSyntax>();
+            var updatedMethods = new Dictionary<BaseMethodDeclarationSyntax, BaseMethodDeclarationSyntax>();
 
             var classes = root.DescendantNodes().OfType<ClassDeclarationSyntax>().ToList();
             foreach (var classDeclaration in classes)
             {
-                var methods = classDeclaration.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
-                foreach (var method in methods)
+                var methodAndOperators =
+                    classDeclaration.DescendantNodes()
+                        .OfType<BaseMethodDeclarationSyntax>()
+                        .Where(x => x.Kind() == SyntaxKind.MethodDeclaration || x.Kind() == SyntaxKind.OperatorDeclaration)
+                        .ToList();
+
+                foreach (var method in methodAndOperators)
                 {
                     var updatedMethod = method;
                     if (RoslynHelper.TransformEmptyMethodToExtern(ref updatedMethod))
