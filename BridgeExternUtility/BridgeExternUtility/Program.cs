@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,47 +13,70 @@ namespace BridgeExternUtility
     {
         private static void Main()
         {
-            const string filePattern = "*.cs";
-            var directories = new[]
+            const string FilePattern = "*.cs";
+            string[] directories =
             {
                 // ATTENTION:
                 // Setup your local paths for Bridge and Bridge.Html5 projects
-                // before running the Utility
+                // before running the Utility.
 
                 @"D:\BridgeFork\Bridge",
                 @"D:\BridgeFork\Html5"      // (!) Bridge.Html5 project should be configured to Suppress warning 0626
             };
 
-            int dirsProcessed = 0;
+            // ====================================================================================
+
+            try
+            {
+                var stat = new Statistics(directories.Length);
+
+                ProcessDirs(directories, FilePattern, stat);
+                stat.PrintStatistics();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Can't process the specified directories. Please see the exception details below:");
+                Console.WriteLine(ex.ToString());
+
+                Console.WriteLine();
+                Console.WriteLine("Press any key to exit..");
+                Console.ReadKey();
+            }
+        }
+
+        private static void ProcessDirs(string[] directories, string filePattern, Statistics stat)
+        {
+
             foreach (var directory in directories)
             {
                 var dirInfo = new DirectoryInfo(directory);
                 var fileInfos = dirInfo.EnumerateFiles(filePattern, SearchOption.AllDirectories).ToList();
+                stat.StartProcessingDir(dirInfo, fileInfos);
 
-                int filesProcessed = 0;
                 foreach (var fileInfo in fileInfos)
                 {
-                    Console.WriteLine($"{dirsProcessed}/{directories.Length} directories have been processed.");
-                    Console.WriteLine($"{filesProcessed}/{fileInfos.Count} files have been processed.");
+                    stat.StartProcessingFile(fileInfo.FullName);
+                    stat.PrintStatus();
 
-                    Console.WriteLine();
-                    Console.WriteLine($"Current dir: {directory}");
-                    Console.WriteLine($"Current file: {fileInfo.FullName}");
+                    try
+                    {
+                        ProcessFile(fileInfo.FullName, stat);
+                    }
+                    catch
+                    {
+                        stat.ProcessingIsFailed(fileInfo.FullName);
+                    }
 
-                    ProcessFile(fileInfo.FullName);
-
-                    ++filesProcessed;
-                    Console.Clear();
+                    stat.EndProcessingFile();
                 }
 
-                ++dirsProcessed;
+                stat.EndProcessingDir();
             }
 
-            Console.WriteLine("All files have been processed.");
-            Console.ReadKey();
         }
 
-        private static void ProcessFile(string fullName)
+        private static void ProcessFile(string fullName, Statistics stat)
         {
             var fileContent = File.ReadAllText(fullName);
             var fileSyntaxTree = CSharpSyntaxTree.ParseText(fileContent);
@@ -60,9 +84,13 @@ namespace BridgeExternUtility
 
             var updatedMethods = new Dictionary<MethodDeclarationSyntax, MethodDeclarationSyntax>();
 
+            // Look at classes only:
             var classes = root.DescendantNodes().OfType<ClassDeclarationSyntax>().ToList();
             foreach (var classDeclaration in classes)
             {
+                var classModified = false;
+
+                // Look at methods of the current class only:
                 var methods = classDeclaration.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
                 foreach (var method in methods)
                 {
@@ -70,15 +98,26 @@ namespace BridgeExternUtility
                     if (RoslynHelper.TransformEmptyMethodToExtern(ref updatedMethod))
                     {
                         updatedMethods[method] = updatedMethod;
+
+                        stat.MethodWasModified();
+                        classModified = true;
                     }
+                }
+
+                if (classModified)
+                {
+                    stat.ClassWasModified();
                 }
             }
 
+            // Modify the file if there are any changes
             if (updatedMethods.Count > 0)
             {
                 root = root.ReplaceNodes(updatedMethods.Keys, (m1, m2) => updatedMethods[m1]);
                 var updatedFileContent = root.ToFullString();
                 File.WriteAllText(fullName, updatedFileContent);
+
+                stat.FileWasModified();
             }
         }
     }
